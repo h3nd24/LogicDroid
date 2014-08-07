@@ -31,8 +31,7 @@ public class Monitor{
     }
   }
 
-  protected static int app_num;
-
+  //protected static int app_num;
 
   public static final int ROOT_UID = 0;
   public static final String ROOT_APP = "ROOT";
@@ -44,20 +43,39 @@ public class Monitor{
   public static final String LOCATION_APP = "LOCATION";
   public static final int CONTACT_UID = 1103;
   public static final String CONTACT_APP = "CONTACT";
+  public static final int HANGUP_UID = 1104;
+  public static final String HANGUP_APP = "HANGUP";
+  public static final int CALLPRIVILEGED_UID = 1105;
+  public static final String CALLPRIVILEGED_APP = "CALLPRIVILEGED";
+  private static final int virtual_app_num = 7;
 
-  public static boolean notInitialized = true;
-  private static HashMap<String, Integer> relMapping = null;
-  private static HashMap<Integer, Integer> mapping;
-  private static MonitorInfo[] componentInfo;
+  //public static boolean notInitialized = true;
 
-  public static boolean isVirtualUID(int UID)
+  private static final Monitor MonitorInstance = new Monitor();
+  public static Monitor getInstance() {return MonitorInstance;}
+
+  //private static HashMap<String, Integer> relMapping = null;
+  //private static HashMap<Integer, Integer> mapping;
+  //private static MonitorInfo[] componentInfo;
+
+  //private static int Monitor_policyID = 0;
+
+  private boolean notInitialized = true;
+  private HashMap<String, Integer> relMapping = null;
+  private HashMap<Integer, Integer> mapping;
+  private MonitorInfo[] componentInfo;
+  private int app_num;
+  private int Monitor_policyID = 0;
+
+  public boolean isVirtualUID(int UID)
   {
-    if (UID == ROOT_UID|| UID == INTERNET_UID|| UID == SMS_UID|| UID == LOCATION_UID|| UID == CONTACT_UID)
+    if (UID == ROOT_UID|| UID == INTERNET_UID|| UID == SMS_UID|| UID == LOCATION_UID|| UID == CONTACT_UID
+        || UID == HANGUP_UID || UID == CALLPRIVILEGED_UID)
       return true;
     return false;
   }
 
-  public static String virtualAppName(int UID)
+  public String virtualAppName(int UID)
   {
     switch (UID)
     {
@@ -66,11 +84,26 @@ public class Monitor{
       case SMS_UID : return SMS_APP;
       case LOCATION_UID : return LOCATION_APP;
       case CONTACT_UID : return CONTACT_APP;
+      case HANGUP_UID : return HANGUP_APP;
+      case CALLPRIVILEGED_UID : return CALLPRIVILEGED_APP;
     }
     return null;
   }
 
-  private static boolean initializeMonitor()
+  private void getRelationsFromKernel()
+  {
+    int j = 0;    
+    while(true)
+    {
+      String rel = LogicDroid.getRelationName(j);
+      if (rel.equals("OUTSIDE-BOUND")) break;
+      relMapping.put(rel, j);
+      Log.i("LogicDroid", "Added relation : " + rel + " to ID " + j);
+      j++;
+    }
+  }
+
+  public boolean initializeMonitor()
   {
     Log.i("track - Monitor", "Initializing Monitor...");
     ArrayList<ApplicationInfo> apps = null;
@@ -94,61 +127,71 @@ public class Monitor{
       app_num = 0;
       return false;
     }
-    mapping = new HashMap<Integer, Integer>();
-    // Doesn't matter if the list application is not sorted
-    int appIdx = 0;
-    ArrayList<MonitorInfo> tempArr = new ArrayList<MonitorInfo>();
-    tempArr.add(new MonitorInfo(ROOT_UID, ROOT_APP));
-    tempArr.add(new MonitorInfo(INTERNET_UID, INTERNET_APP));
-    tempArr.add(new MonitorInfo(SMS_UID, SMS_APP));
-    tempArr.add(new MonitorInfo(LOCATION_UID, LOCATION_APP));
-    tempArr.add(new MonitorInfo(CONTACT_UID, CONTACT_APP));
-    mapping.put(ROOT_UID, 0);
-    mapping.put(INTERNET_UID, 1);
-    mapping.put(SMS_UID, 2);
-    mapping.put(LOCATION_UID, 3);
-    mapping.put(CONTACT_UID, 4);
-    appIdx = 5;
-    for (ApplicationInfo ai : apps)
-    {
-      if (!mapping.containsKey(ai.uid))
+    //synchronized(this)
+    //{
+      Log.i("track - Monitor", "InitializeMonitor : " + apps.size());
+      mapping = new HashMap<Integer, Integer>();
+      // Doesn't matter if the list application is not sorted
+      int appIdx = 0;
+      ArrayList<MonitorInfo> tempArr = new ArrayList<MonitorInfo>();
+      tempArr.add(new MonitorInfo(ROOT_UID, ROOT_APP));
+      tempArr.add(new MonitorInfo(INTERNET_UID, INTERNET_APP));
+      tempArr.add(new MonitorInfo(SMS_UID, SMS_APP));
+      tempArr.add(new MonitorInfo(LOCATION_UID, LOCATION_APP));
+      tempArr.add(new MonitorInfo(CONTACT_UID, CONTACT_APP));
+      tempArr.add(new MonitorInfo(HANGUP_UID, HANGUP_APP));
+      tempArr.add(new MonitorInfo(CALLPRIVILEGED_UID, CALLPRIVILEGED_APP));
+      mapping.put(ROOT_UID, 0);
+      mapping.put(INTERNET_UID, 1);
+      mapping.put(SMS_UID, 2);
+      mapping.put(LOCATION_UID, 3);
+      mapping.put(CONTACT_UID, 4);
+      mapping.put(HANGUP_UID, 5);
+      mapping.put(CALLPRIVILEGED_UID, 6);
+      appIdx = virtual_app_num;
+      for (ApplicationInfo ai : apps)
       {
-        mapping.put(ai.uid, appIdx);
-        tempArr.add(new MonitorInfo(ai.uid, ai.processName));
+        if (!mapping.containsKey(ai.uid))
+        {
+          mapping.put(ai.uid, appIdx);
+          tempArr.add(new MonitorInfo(ai.uid, ai.processName));
+          appIdx++;
+        }
+        else
+        {
+          tempArr.get(mapping.get(ai.uid)).appendName(ai.processName);
+        }
+      }
+      app_num = tempArr.size();
+      componentInfo = tempArr.toArray(new MonitorInfo[app_num]);
+
+      appIdx = 0;
+      // Additional array to communicate with kernel
+      int UID[] = new int[app_num - virtual_app_num];
+      for (int i = virtual_app_num; i < app_num; i++)
+      {
+        UID[i - virtual_app_num] = tempArr.get(i).UID;
+      }
+      Monitor_policyID = LogicDroid.initializeMonitor(UID);
+
+      if (relMapping == null) relMapping = new HashMap<String, Integer>();
+      if (LogicDroid.isMonitorPresent()) getRelationsFromKernel();
+
+      for (int i = 0; i < app_num; i++)
+      {
+        MonitorInfo mi = tempArr.get(i);
+        Log.i("track - Monitor", "   - item(" + appIdx + ") : " + mi.name + " (" + mi.UID + ")");
         appIdx++;
       }
-      else
-      {
-        tempArr.get(mapping.get(ai.uid)).appendName(ai.processName);
-      }
-    }
-    app_num = tempArr.size();
-    componentInfo = tempArr.toArray(new MonitorInfo[app_num]);
 
-    appIdx = 0;
-    // Additional array to communicate with kernel
-    int UID[] = new int[app_num - 5];
-    for (int i = 5; i < app_num; i++)
-    {
-      UID[i - 5] = tempArr.get(i).UID;
-    }
-    LogicDroid.initializeMonitor(UID);
-
-    if (relMapping == null) relMapping = new HashMap<String, Integer>();
-
-    for (int i = 0; i < app_num; i++)
-    {
-      MonitorInfo mi = tempArr.get(i);
-      Log.i("track - Monitor", "   - item(" + appIdx + ") : " + mi.name + " (" + mi.UID + ")");
-      appIdx++;
-    }
-
-    notInitialized = false;
+      notInitialized = false;
+    //}
     return true;
   }
 
-  public static boolean checkEvent(Event ev, long timestamp)
+  public boolean checkEvent(Event ev, long timestamp)
   {
+    //Log.i("LogicDroid", "checking PE for (" + ev.vars.get(0) + ", " + ev.vars.get(1) + ") relation : " + ev.rel + " variable count : " + ev.varCount);
     if (notInitialized)
     {
       if (!initializeMonitor()) return false; // If the monitor is failed to initialize just let the event pass through
@@ -159,37 +202,75 @@ public class Monitor{
     }
 
     boolean result = false;
-    if (relMapping.containsKey("call"))
+//    if (!relMapping.containsKey("call"))
+//    {
+//      if (LogicDroid_isMonitorPresent())
+//      {
+//        getRelationsFromKernel();
+//      }
+//      else
+//      {
+//        return result;
+//      }
+//    }
+    
+    //long timer = System.currentTimeMillis();
+    int syscall_result = LogicDroid.checkEvent(Monitor_policyID, ev.vars.get(0), ev.vars.get(1));
+    //Log.i("LogicDroid", "checkEvent from kernel yields : " + syscall_result);
+    if (syscall_result == -1)
     {
-      long timer = System.currentTimeMillis();
-      result = LogicDroid.checkEvent(ev.vars.get(0), ev.vars.get(1));
-      Log.i("LogicDroid", "Finished checking PE for (" + ev.vars.get(0) + ", " + ev.vars.get(1) + ") resulting in " + result);
+      Log.i("LogicDroid", ev.vars.get(0) + "-" + ev.vars.get(1) + "-POLICY_MISMATCH");
+      initializeMonitor();
+      syscall_result = LogicDroid.checkEvent(Monitor_policyID, ev.vars.get(0), ev.vars.get(1));
     }
+    result = (syscall_result == 1);
+    Log.i("LogicDroid", ev.vars.get(0) + "-" + ev.vars.get(1) + "-" + ((result) ? 1 : 0));
+    //Log.i("track - PETimer", System.currentTimeMillis() - timer + "ms");
+
     return result;
   }
 
-  public static void renewMonitorVariable(String rel, boolean value, int ... UID)
+  public void renewMonitorVariable(String rel, boolean value, int ... UID)
   {
     if (notInitialized)
     {
       if (!initializeMonitor()) return; // If the monitor is failed to initialize just ignore
     }
 
+    if(!relMapping.containsKey(rel))
+    {
+      if (LogicDroid.isMonitorPresent())
+      {
+        getRelationsFromKernel();
+      }
+      else
+      {
+        return;
+      }
+    }
     if(relMapping.containsKey(rel))
     {
       int idx = relMapping.get(rel);
-      LogicDroid.modifyStaticVariable(UID[0], value, relMapping.get(rel));
+      if (LogicDroid.modifyStaticVariable(Monitor_policyID, UID[0], value, relMapping.get(rel)) == -1) 
+      {
+        initializeMonitor();
+        LogicDroid.modifyStaticVariable(Monitor_policyID, UID[0], value, relMapping.get(rel)); // this time it's almost guaranteed to succeed
+      }
       String nm = componentInfo[mapping.get(UID[0])].name;
       if(nm == null) nm = "";
-      Log.i("LogicDroid", "renew monitor status for app " + nm + " " + rel + " to " + Boolean.toString(value));
+      Log.i("LogicDroid", rel + ":" + nm + " to " + ((value)?1:0));
     }
-    else
+    else // if there is still no matching relations even after we fetch from the kernel relations, there is something wrong
+    {
+      Log.e("LogicDroid", "Relation " + rel + " is not in the list of relations");
+    }
+    /*else
     {
       if (rel.startsWith("monitorvars:"))
       {
         Log.i("LogicDroid", "Setting monitor relation for " + rel.substring(12, rel.length()) + " to " + UID[0]);
         relMapping.put(rel.substring(12, rel.length()), UID[0]);
       }
-    }
+    }*/
   }
 }
