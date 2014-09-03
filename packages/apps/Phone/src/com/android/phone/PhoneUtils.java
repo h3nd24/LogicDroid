@@ -69,7 +69,7 @@ import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
 
-// hack - hendra
+// LogicDroid
 // ##############################################
 import android.pem.Monitor;
 import android.pem.PrivilegeEscalationException;
@@ -472,7 +472,7 @@ public class PhoneUtils {
     static boolean hangup(Call call) {
         try {
         
-            // hack - hendra
+            // LogicDroid
 	          // ##################################################################
 	          // #                         Hook Hangup                            #
 	          // ##################################################################

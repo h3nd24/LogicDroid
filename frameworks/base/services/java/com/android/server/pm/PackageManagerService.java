@@ -113,7 +113,7 @@ import android.view.Display;
 import android.view.WindowManager;
 
 // ########################
-// #       LogicDroid     #
+// #      LogicDroid      #
 // ########################
 import android.pem.Monitor;
 // ########################
@@ -1245,7 +1245,12 @@ public class PackageManagerService extends IPackageManager.Stub {
             mRequiredVerifierPackage = getRequiredVerifierLPr();
         } // synchronized (mPackages)
         } // synchronized (mInstallLock)
-		Monitor.notInitialized = true;
+        
+	      // #######################################
+	      // #             LogicDroid              #
+ 	      // #######################################
+	      Monitor.getInstance().initializeMonitor();	
+	      // #######################################
     }
 
     public boolean isFirstBoot() {
@@ -6975,12 +6980,12 @@ public class PackageManagerService extends IPackageManager.Stub {
             }
         }
 
-		    // LogicDroid
-		    // ####################################################
-		    // # Maintain consistent view of the application list #
-		    // #################################################### 
-		    Monitor.notInitialized = true;
-		    // ####################################################
+		// LogicDroid
+		// ####################################################
+		// # Maintain consistent view of the application list #
+		// #################################################### 
+		Monitor.getInstance().initializeMonitor();
+		// ####################################################
     }
 
     private void replacePackageLI(PackageParser.Package pkg,
@@ -7743,12 +7748,13 @@ public class PackageManagerService extends IPackageManager.Stub {
                     writeSettings);
         }
 
-		    // LogicDroid
-		    // ####################################################
-		    // # Maintain consistent view of the application list #
-		    // #################################################### 
-		    Monitor.notInitialized = true;
-		    // ####################################################
+		// LogicDroid
+		// ####################################################
+		// # Maintain consistent view of the application list #
+		// #################################################### 
+		//Monitor.notInitialized = true;
+		Monitor.getInstance().initializeMonitor();
+		// ####################################################
 
         return ret;
     }

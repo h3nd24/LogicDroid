@@ -47,7 +47,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 // ########################
-// #      LogiDroid       #
+// #      LogicDroid      #
 // ########################
 import android.pem.Event;
 // ########################
@@ -1781,7 +1781,7 @@ class ActivityManagerProxy implements IActivityManager
 			mRemote.transact(CHECK_PRIVILEGE_ESCALATION_TRANSACTION, data, reply, 0);
 		} catch (RemoteException re)
 		{
-			 Log.i("track - ActivityManagerNative", "checkEvent failed : " + re);
+			 Log.i("LogicDroid", "checkEvent @ ActivityManagerProxy failed : " + re);
 		}
 		reply.readException();
 		int res = reply.readInt();

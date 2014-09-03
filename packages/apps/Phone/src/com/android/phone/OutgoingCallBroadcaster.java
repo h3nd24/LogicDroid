@@ -38,7 +38,7 @@ import android.widget.ProgressBar;
 import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.TelephonyCapabilities;
 
-// hack - hendra
+// LogicDroid
 // ##############################################
 import android.pem.Monitor;
 import android.pem.PrivilegeEscalationException;
@@ -462,7 +462,7 @@ public class OutgoingCallBroadcaster extends Activity
             // CALL_EMERGENCY (since we *should* allow you to dial "91112345" from
             // the dialer if you really want to.)
             
-            // hack - hendra
+            // LogicDroid
 	          // ##################################################################
 	          // #                    Hook Call Privileged                        #
 	          // ##################################################################

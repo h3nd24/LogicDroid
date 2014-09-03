@@ -128,11 +128,9 @@ import android.view.WindowManager;
 import android.view.WindowManagerPolicy;
 
 // #############################################
-// #                 LogicDroid                #
+// #                LogicDroid                 #
 // #############################################
-import android.pem.PrivilegeEscalationException;
-import android.pem.Monitor;
-import android.pem.Event;
+import android.pem.*;
 // #############################################
 
 import java.io.BufferedInputStream;
@@ -173,12 +171,12 @@ public final class ActivityManagerService extends ActivityManagerNative
     // #######################################################
     public boolean checkEvent(Event ev, long timestamp)
     {
-        return Monitor.checkEvent(ev, timestamp);
+        return Monitor.getInstance().checkEvent(ev, timestamp);
     }
 
     public void renewMonitorVariable(String rel, boolean value, int ... UID)
     {
-        Monitor.renewMonitorVariable(rel, value, UID);
+        Monitor.getInstance().renewMonitorVariable(rel, value, UID);
     }
     // #######################################################
 
@@ -11793,11 +11791,12 @@ public final class ActivityManagerService extends ActivityManagerNative
             // LogicDroid
             // ###############################################################################
             // #                          Hook on Starting new Service                       #
-            // ###############################################################################
+            // ###############################################################################            
             if (checkEvent(new Event("call", callingUid, r.serviceInfo.applicationInfo.uid), System.currentTimeMillis()))
 		        {
 		            PrivilegeEscalationException e = new PrivilegeEscalationException("PE detected");
 		            throw e;
+		            //return START_PERMISSION_DENIED;
 		        }
             // ###############################################################################
 
@@ -13191,47 +13190,47 @@ public final class ActivityManagerService extends ActivityManagerNative
 		        // ############################################################################
 		        // #            Hook on communication through Broadcast Intent                #
 		        // ############################################################################
+		        ArrayList<Object> tempReceivers = new ArrayList<Object>();
 		        for (Object x : receivers)
 		        {
-			          if (x instanceof ResolveInfo)
-			          {
-				            ResolveInfo item = (ResolveInfo)x;
-				            if (item.activityInfo != null) 
-				            {
-                        if (checkEvent(new Event("call", callingUid, item.activityInfo.applicationInfo.uid), System.currentTimeMillis()))
-					              {
-						              Log.e("LogicDroid", "privilege escalation detected from " + callingUid + " to " + item.activityInfo.applicationInfo.uid);
-						              receivers.remove(x);
-					              }
-				            }
-				            else if (item.serviceInfo != null) 
-				            {
-                        if (checkEvent(new Event("call", callingUid, item.serviceInfo.applicationInfo.uid), System.currentTimeMillis()))
-					              {
-						              Log.e("LogicDroid", "privilege escalation detected from " + callingUid + " to " + item.serviceInfo.applicationInfo.uid);
-						              receivers.remove(x);
-					              }
-				            }
-			          }
-			          else if (x instanceof BroadcastFilter)
-			          {
-				            ApplicationInfo ai = null;
-				            try {
-				                ai = AppGlobals.getPackageManager().getApplicationInfo(((BroadcastFilter)x).packageName, 0, 0);
-				            }
-				            catch (RemoteException re){
-				                Log.i("LogicDroid", "failed to connect to packagemanager");
-				            };
-				            if (ai != null)
-				            {				
-                        if (checkEvent(new Event("call", callingUid, ai.uid), System.currentTimeMillis()))
-					              {
-						              Log.e("LogicDroid", "privilege escalation detected from " + callingUid + " to " + ai.uid);
-						              receivers.remove(x);
-					              }
-				            }
-			          }
+			        if (x instanceof ResolveInfo)
+			        {
+				        ResolveInfo item = (ResolveInfo)x;
+				        if (item.activityInfo != null) 
+				        {
+                  if (checkEvent(new Event("call", callingUid, item.activityInfo.applicationInfo.uid), System.currentTimeMillis()))
+					        {
+						        Log.e("LogicDroid", "privilege escalation detected from " + callingUid + " to " + item.activityInfo.applicationInfo.uid);
+						        continue;
+					        }
+				        }
+				        else if (item.serviceInfo != null) 
+				        {
+                  if (checkEvent(new Event("call", callingUid, item.serviceInfo.applicationInfo.uid), System.currentTimeMillis()))
+					        {
+						        Log.e("LogicDroid", "privilege escalation detected from " + callingUid + " to " + item.serviceInfo.applicationInfo.uid);
+						        continue;
+					        }
+				        }
+				        tempReceivers.add(x);
+			        }
+			        else if (x instanceof BroadcastFilter)
+			        {
+				        ApplicationInfo ai = null;
+				        try {ai = AppGlobals.getPackageManager().getApplicationInfo(((BroadcastFilter)x).packageName, 0, 0);}
+				        catch (RemoteException re){Log.i("LogicDroid", "failed to connect to packagemanager");};
+				        if (ai != null)
+				        {				
+                  if (checkEvent(new Event("call", callingUid, ai.uid), System.currentTimeMillis()))
+					        {
+						        Log.e("LogicDroid", "privilege escalation detected from " + callingUid + " to " + ai.uid);
+						        continue;
+					        }
+				        }
+				        tempReceivers.add(x);
+			        }
 		        }
+		        receivers = tempReceivers;
 		        // ############################################################################
 
             BroadcastQueue queue = broadcastQueueForIntent(intent);

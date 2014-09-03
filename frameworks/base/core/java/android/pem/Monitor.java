@@ -31,8 +31,6 @@ public class Monitor{
     }
   }
 
-  //protected static int app_num;
-
   public static final int ROOT_UID = 0;
   public static final String ROOT_APP = "ROOT";
   public static final int INTERNET_UID = 1100;
@@ -49,16 +47,8 @@ public class Monitor{
   public static final String CALLPRIVILEGED_APP = "CALLPRIVILEGED";
   private static final int virtual_app_num = 7;
 
-  //public static boolean notInitialized = true;
-
   private static final Monitor MonitorInstance = new Monitor();
   public static Monitor getInstance() {return MonitorInstance;}
-
-  //private static HashMap<String, Integer> relMapping = null;
-  //private static HashMap<Integer, Integer> mapping;
-  //private static MonitorInfo[] componentInfo;
-
-  //private static int Monitor_policyID = 0;
 
   private boolean notInitialized = true;
   private HashMap<String, Integer> relMapping = null;
@@ -191,7 +181,6 @@ public class Monitor{
 
   public boolean checkEvent(Event ev, long timestamp)
   {
-    //Log.i("LogicDroid", "checking PE for (" + ev.vars.get(0) + ", " + ev.vars.get(1) + ") relation : " + ev.rel + " variable count : " + ev.varCount);
     if (notInitialized)
     {
       if (!initializeMonitor()) return false; // If the monitor is failed to initialize just let the event pass through
@@ -202,21 +191,9 @@ public class Monitor{
     }
 
     boolean result = false;
-//    if (!relMapping.containsKey("call"))
-//    {
-//      if (LogicDroid_isMonitorPresent())
-//      {
-//        getRelationsFromKernel();
-//      }
-//      else
-//      {
-//        return result;
-//      }
-//    }
     
-    //long timer = System.currentTimeMillis();
     int syscall_result = LogicDroid.checkEvent(Monitor_policyID, ev.vars.get(0), ev.vars.get(1));
-    //Log.i("LogicDroid", "checkEvent from kernel yields : " + syscall_result);
+
     if (syscall_result == -1)
     {
       Log.i("LogicDroid", ev.vars.get(0) + "-" + ev.vars.get(1) + "-POLICY_MISMATCH");
@@ -225,7 +202,6 @@ public class Monitor{
     }
     result = (syscall_result == 1);
     Log.i("LogicDroid", ev.vars.get(0) + "-" + ev.vars.get(1) + "-" + ((result) ? 1 : 0));
-    //Log.i("track - PETimer", System.currentTimeMillis() - timer + "ms");
 
     return result;
   }
@@ -264,13 +240,5 @@ public class Monitor{
     {
       Log.e("LogicDroid", "Relation " + rel + " is not in the list of relations");
     }
-    /*else
-    {
-      if (rel.startsWith("monitorvars:"))
-      {
-        Log.i("LogicDroid", "Setting monitor relation for " + rel.substring(12, rel.length()) + " to " + UID[0]);
-        relMapping.put(rel.substring(12, rel.length()), UID[0]);
-      }
-    }*/
   }
 }
